@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from simple_start.calc_metods import (
+from simple_start.calc_methods import (
     SimpleStartHandler,
 )
 

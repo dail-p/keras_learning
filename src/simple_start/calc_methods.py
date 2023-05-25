@@ -13,7 +13,7 @@ from keras.optimizers import (
     Adam,
 )
 
-from calc_metods import (
+from calc_methods import (
     BaseNetworkHandler,
 )
 
