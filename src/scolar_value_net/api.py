@@ -2,16 +2,29 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from matplotlib.pyplot import (
     Axes,
 )
 
 from scolar_value_net.calc_methods import (
-    ScolarValueNetHandler,
+    FNetHandler,
     PVINetHandler,
-QNetHandler,
-FNetHandler
+    QNetHandler,
+    ScolarValueNetHandler,
 )
+
+
+def nearest_value_index(items, value):
+    """Поиск ближайшего значения до value в списке items"""
+    found = items[0]
+    ind = 0
+    for index, item in enumerate(items):
+        if abs(item - value) < abs(found - value):
+            found = item
+            ind = index
+
+    return ind
 
 
 class ScolarValueFacade:
@@ -65,12 +78,27 @@ class ScolarValueFacade:
                     delimiter='\t',
                 )
 
+                # Преобразуем интекс положения в l1
                 data[:, 0] = get_length_value_list(data[:, 0])
 
+                # Добавим столбец высоты изгиба в начало
                 curvature_index = int(current_path[-1])
                 curvature_value = get_curvature_value(curvature_index)
-
                 data = np.insert(data, 0, 10 * [curvature_value], axis=1)
+
+                # Заменим последний столбец на значения Q98 из файлов lzwrk
+                q_list = [0] * 10
+                for file in files:
+                    if file[0].isdigit():
+                        indx = int(file[0:-6]) - 1
+                        q_data = np.loadtxt(
+                            os.path.join(current_path, file),
+                            delimiter='\t',
+                        )
+
+                        q_list[indx] = q_data[-1, 2]
+
+                data[:, -1] = q_list
 
                 if result is None:
                     result = data
@@ -78,6 +106,32 @@ class ScolarValueFacade:
                     result = np.vstack([result, data])
 
         return result
+
+    def _normalize(self, data, prefix, init=False):
+        for i in range(data.shape[1]):
+            column_data = data[:, i]
+            if init:
+                setattr(self, f'{prefix}_normalize_{i}', (column_data.min(), column_data.max()))
+                _min, _max = column_data.min(), column_data.max()
+            else:
+                _min, _max = getattr(self, f'{prefix}_normalize_{i}')
+
+            data[:, i] = (column_data - _min) / (_max - _min)
+
+    def _denormalize(self, data, prefix):
+        for i in range(data.shape[1]):
+            column_data = data[:, i]
+            _min, _max = getattr(self, f'{prefix}_normalize_{i}')
+            data[:, i] = column_data * (_max - _min) + _min
+
+    def _get_real_data(self):
+        x = self.x_data.copy()
+        y = self.y_data.copy()
+
+        self._denormalize(x, 'x')
+        self._denormalize(y, 'y')
+
+        return x, y
 
     def _prepare_data(self, data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -95,8 +149,12 @@ class ScolarValueFacade:
 
         """
         data = self.load_data()
+        x, y = self._prepare_data(data)
 
-        return self._prepare_data(data)
+        self._normalize(x, 'x', init=True)
+        self._normalize(y, 'y', init=True)
+
+        return x, y
 
     def _calc(self):
         """
@@ -106,7 +164,7 @@ class ScolarValueFacade:
         self.handler.run()
         self.handler.get_metrics_values()
         self.print_metrics()
-        #self.print_predict()
+        self.print_predict()
 
     def _get_value(self, key):
         """
@@ -117,7 +175,13 @@ class ScolarValueFacade:
         Returns:
 
         """
-        return self.handler.model.predict(key)
+        self._normalize(key, 'x')
+
+        predict = self.handler.model.predict(key)
+
+        self._denormalize(predict, 'y')
+
+        return predict
 
     def _get_weights(self):
         """
@@ -142,8 +206,12 @@ class ScolarValueFacade:
 
             """
             fig, axe = plt.subplots()
-            axe.plot(y, predict_data[:, 10, index],)
-            axe.scatter(self.x_data[:, 1], self.y_data[:, index])
+            for h in set(x_data[:, 0]):
+                index = nearest_value_index(x, h)
+                axe.plot(y, predict_data[:, index, index])
+
+                axe.scatter(x_data[:, 1], y_data[:, index])
+
             axe.set_xlabel('l')
             axe.set_ylabel(label)
             axe.set_title('a)')
@@ -165,17 +233,20 @@ class ScolarValueFacade:
 
             fig.savefig(os.path.join('scolar_value_net', 'figure', f'predict3d_{index}'))
 
-        x = np.arange(min(self.x_data[:, 0]), max(self.x_data[:, 0]), 0.01)
-        y = np.arange(min(self.x_data[:, 1]), max(self.x_data[:, 1]), 0.15)
+        x_data, y_data = self._get_real_data()
+
+        x = np.arange(min(x_data[:, 0]), max(x_data[:, 0]), 0.01)
+        y = np.arange(min(x_data[:, 1]), max(x_data[:, 1]), 0.15)
         xgrid, ygrid = np.meshgrid(x, y)
 
         predict_data = np.zeros(xgrid.shape + (3,))
         for i, (x_item, y_item) in enumerate(zip(xgrid, ygrid)):
             predict_data[i] = self._get_value(np.column_stack([x_item, y_item]))
 
-        build_figure(0, 'PVI')
-        build_figure(1, 'q')
-        build_figure(2, 'F')
+        predict_data = pd.DataFrame(predict_data, columns=['E', 'PVI', 'q'])
+        build_figure(0, 'E')
+        build_figure(1, 'PVI')
+        build_figure(2, 'q')
 
     def print_metrics(self):
         """
@@ -230,7 +301,7 @@ class PVINetFacade(ScolarValueFacade):
     def _prepare_data(self, data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         x, y = super()._prepare_data(data)
 
-        return x, y[:, 0]
+        return x, y[:, 1]
 
 
 class QNetFacade(ScolarValueFacade):
@@ -245,19 +316,19 @@ class QNetFacade(ScolarValueFacade):
     def _prepare_data(self, data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         x, y = super()._prepare_data(data)
 
-        return x, y[:, 1]
+        return x, y[:, 2]
 
 
-class FNetFacade(ScolarValueFacade):
+class ENetFacade(ScolarValueFacade):
     """
 
     """
     calc_method = FNetHandler
 
-    metric_title = 'F'
-    metric_name = 'F'
+    metric_title = 'E'
+    metric_name = 'E'
 
     def _prepare_data(self, data: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         x, y = super()._prepare_data(data)
 
-        return x, y[:, 2]
+        return x, y[:, 0]

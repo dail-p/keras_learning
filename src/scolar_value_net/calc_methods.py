@@ -32,7 +32,7 @@ class ScolarValueNetHandler(BaseNetworkHandler):
 
     def _get_config_model(self) -> dict:
         return {
-            'loss': 'mae',
+            'loss': 'mse',
             'optimizer': Adam(0.05),
             'metrics': [
                 'mse',
