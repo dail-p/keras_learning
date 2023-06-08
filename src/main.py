@@ -10,5 +10,8 @@ from scolar_value_net.api import (
 
 
 if __name__ == '__main__':
-    ScolarValueFacade()
+    #ScolarValueFacade()
+    #ENetFacade()
+    PVINetFacade()
+    QNetFacade()
 

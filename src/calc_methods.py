@@ -24,15 +24,19 @@ class BaseNetworkHandler(ABC):
     # Какую часть данных брать для обучения
     share_of_data_for_train = 0.8
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, *args, **kwargs):
+    def __init__(self, x: np.ndarray, y: np.ndarray, *args, force_calc=True, **kwargs):
         """
         Args:
             x: списиок выходных параметров
             y: список выходных параметров
+            force_calc: надо ли считать с нуля
         """
         super().__init__(*args, **kwargs)
+        self.force_calc = force_calc
+
         self.model = self.create_model()
-        self.x_train, self.y_train, self.x_test, self.y_test = self._share_data(x, y)
+
+        self.x_train, self.y_train, self.x_test, self.y_test = x, y, x, y
 
     @abstractmethod
     def _get_model_path(self) -> str:
@@ -71,9 +75,11 @@ class BaseNetworkHandler(ABC):
         """
         Создает модель нейроной сети
         """
-        model = self.model_cls(self._get_layers())
-
-        model.compile(**self._get_config_model())
+        if self.force_calc:
+            model = self.model_cls(self._get_layers())
+            model.compile(**self._get_config_model())
+        else:
+            model = self.load()
 
         return model
 
@@ -83,19 +89,21 @@ class BaseNetworkHandler(ABC):
         """
         self.model.save(self._get_model_path())
 
-    def load(self) -> None:
+    def load(self):
         """
         Загружает модель нейронной сети из файла
         """
-        self.model = load_model(self._get_model_path())
+        return load_model(self._get_model_path())
 
     def run(self):
         """
         Обучает нейронную сеть
         """
-        self.history = self.model.fit(self.x_train, self.y_train, **self._get_config_trains())
+        if self.force_calc:
+            self.model.fit(self.x_train, self.y_train, **self._get_config_trains())
+            self.save()
 
-        self.save()
+        self.history = self.model.history
 
     def get_metrics_values(self):
         """

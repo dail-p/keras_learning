@@ -44,7 +44,7 @@ class ScolarValueNetHandler(BaseNetworkHandler):
 
     def _get_config_trains(self) -> dict:
         return {
-            'epochs': 300,
+            'epochs': 400,
             'verbose': False,
         }
 
@@ -79,12 +79,12 @@ class QNetHandler(ScolarValueNetHandler):
         ]
 
 
-class FNetHandler(ScolarValueNetHandler):
+class ENetHandler(ScolarValueNetHandler):
     """
-    Обработчик сети с одним выходным параметром F
+    Обработчик сети с одним выходным параметром E
     """
     def _get_model_path(self) -> str:
-        return os.path.join('models', 'scolar_value_F')
+        return os.path.join('models', 'scolar_value_E')
 
     def _get_layers(self) -> Iterable:
         return [
