@@ -29,13 +29,16 @@ def nearest_value_index(items, value):
 
 class ScolarValueFacade:
     """
-
+    Фасад для работы с результатами обучения
     """
+    # Класс, описывающий сеть
     calc_method = ScolarValueNetHandler
-
+    # Наименование файла с данными
     data_file_name = 'KIN_98.csv'
 
+    # Заголовок картинки с метриками
     metric_title = 'PVI, Q, F'
+    # Наименование файла-картинки с метриками
     metric_name = 'PVI_Q_F'
 
     def __init__(self):
@@ -279,9 +282,6 @@ class ScolarValueFacade:
             axe:
             data:
             axe_name:
-
-        Returns:
-
         """
         axe.plot(data)
         axe.set_ylim(0, data[10])
@@ -291,7 +291,7 @@ class ScolarValueFacade:
 
 class PVINetFacade(ScolarValueFacade):
     """
-
+    Фасад для работы с результатами обучения
     """
     calc_method = PVINetHandler
 
@@ -306,7 +306,7 @@ class PVINetFacade(ScolarValueFacade):
 
 class QNetFacade(ScolarValueFacade):
     """
-
+    Фасад для работы с результатами обучения
     """
     calc_method = QNetHandler
 
@@ -321,7 +321,7 @@ class QNetFacade(ScolarValueFacade):
 
 class ENetFacade(ScolarValueFacade):
     """
-
+    Фасад для работы с результатами обучения
     """
     calc_method = FNetHandler
 

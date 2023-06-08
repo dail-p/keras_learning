@@ -18,7 +18,7 @@ from calc_methods import (
 
 class ScolarValueNetHandler(BaseNetworkHandler):
     """
-
+    Обработчик сети с сколярными выходными параметрами
     """
     def _get_model_path(self) -> str:
         return os.path.join('models', 'scolar_value')
@@ -51,7 +51,7 @@ class ScolarValueNetHandler(BaseNetworkHandler):
 
 class PVINetHandler(ScolarValueNetHandler):
     """
-
+    Обработчик сети с одним выходным параметром PVI
     """
     def _get_model_path(self) -> str:
         return os.path.join('models', 'scolar_value_PVI')
@@ -66,7 +66,7 @@ class PVINetHandler(ScolarValueNetHandler):
 
 class QNetHandler(ScolarValueNetHandler):
     """
-
+    Обработчик сети с одним выходным параметром Q
     """
     def _get_model_path(self) -> str:
         return os.path.join('models', 'scolar_value_Q')
@@ -81,7 +81,7 @@ class QNetHandler(ScolarValueNetHandler):
 
 class FNetHandler(ScolarValueNetHandler):
     """
-
+    Обработчик сети с одним выходным параметром F
     """
     def _get_model_path(self) -> str:
         return os.path.join('models', 'scolar_value_F')
